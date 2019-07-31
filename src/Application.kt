@@ -1,14 +1,23 @@
 package fr.itlinkshare.server
 
-import io.ktor.application.*
-import io.ktor.response.*
-import io.ktor.request.*
-import io.ktor.features.*
-import io.ktor.routing.*
-import io.ktor.http.*
-import io.ktor.auth.*
-import com.fasterxml.jackson.databind.*
-import io.ktor.jackson.*
+import com.fasterxml.jackson.databind.SerializationFeature
+import fr.itlinkshare.server.authentication.JwtTokenConfig
+import fr.itlinkshare.server.authentication.login
+import io.ktor.application.Application
+import io.ktor.application.call
+import io.ktor.application.install
+import io.ktor.features.CORS
+import io.ktor.features.ContentNegotiation
+import io.ktor.features.StatusPages
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.jackson.jackson
+import io.ktor.response.respond
+import io.ktor.response.respondText
+import io.ktor.routing.get
+import io.ktor.routing.routing
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -18,15 +27,12 @@ fun Application.module(testing: Boolean = false) {
     install(CORS) {
         method(HttpMethod.Options)
         method(HttpMethod.Put)
+        method(HttpMethod.Get)
         method(HttpMethod.Delete)
-        method(HttpMethod.Patch)
         header(HttpHeaders.Authorization)
-        header("MyCustomHeader")
+        header(HttpHeaders.ContentType)
         allowCredentials = true
         anyHost() // @TODO: Don't do this in production if possible. Try to limit it.
-    }
-
-    install(Authentication) {
     }
 
     install(ContentNegotiation) {
@@ -35,27 +41,34 @@ fun Application.module(testing: Boolean = false) {
         }
     }
 
+    install(StatusPages) {
+        exception<AuthenticationException> { cause ->
+            call.respond(HttpStatusCode.Unauthorized)
+        }
+        exception<AuthorizationException> { cause ->
+            call.respond(HttpStatusCode.Forbidden)
+        }
+        exception<InvalidTokenException> { cause ->
+            call.respond(HttpStatusCode.Unauthorized, cause)
+        }
+
+    }
+
+    val issuer = environment.config.property("jwt.domain").getString()
+    val audience = environment.config.property("jwt.audience").getString()
+    val realm = environment.config.property("jwt.realm").getString()
     routing {
-        get("/") {
-            call.respondText("HELLO WORLD!", contentType = ContentType.Text.Plain)
+        get("/status") {
+            call.respondText("Server is running : OK", contentType = ContentType.Text.Plain)
         }
 
-        install(StatusPages) {
-            exception<AuthenticationException> { cause ->
-                call.respond(HttpStatusCode.Unauthorized)
-            }
-            exception<AuthorizationException> { cause ->
-                call.respond(HttpStatusCode.Forbidden)
-            }
+        login(JwtTokenConfig(issuer, audience, realm))
 
-        }
 
-        get("/json/jackson") {
-            call.respond(mapOf("hello" to "world"))
-        }
     }
 }
 
+class InvalidTokenException(cause: String) : RuntimeException(cause)
 class AuthenticationException : RuntimeException()
 class AuthorizationException : RuntimeException()
 
