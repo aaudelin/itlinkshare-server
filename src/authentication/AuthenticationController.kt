@@ -24,7 +24,6 @@ import java.time.Instant
 import java.util.*
 
 const val HOUR_TO_MILLIS = 1000*60*60
-const val SECRET = "6{~e9<}8+mR0eg`vw?~Hr4w(8[oe9-R9MA1N+wQ@w@N^]l1=Jk<MT1%GN~+p#3^"
 fun formatDate(date: Date): String = SimpleDateFormat("yyyy/MM/dd hh:mm:ss").format(date)
 
 fun Route.login(jwtTokenConfig: JwtTokenConfig) {
