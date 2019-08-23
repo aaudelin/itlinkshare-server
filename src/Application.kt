@@ -3,6 +3,7 @@ package fr.itlinkshare.server
 import com.fasterxml.jackson.databind.SerializationFeature
 import fr.itlinkshare.server.authentication.JwtTokenConfig
 import fr.itlinkshare.server.authentication.login
+import fr.itlinkshare.server.service.hikari
 import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
@@ -18,6 +19,7 @@ import io.ktor.response.respond
 import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.routing
+import org.jetbrains.exposed.sql.Database
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -51,21 +53,32 @@ fun Application.module(testing: Boolean = false) {
         exception<InvalidTokenException> { cause ->
             call.respond(HttpStatusCode.Unauthorized, cause)
         }
-
     }
 
-    val issuer = environment.config.property("jwt.domain").getString()
-    val audience = environment.config.property("jwt.audience").getString()
-    val realm = environment.config.property("jwt.realm").getString()
+    initDatabase();
+    var jwtTokenConfig = initJwtTokenConfig()
+
     routing {
         get("/status") {
             call.respondText("Server is running : OK", contentType = ContentType.Text.Plain)
         }
-
-        login(JwtTokenConfig(issuer, audience, realm))
+        login(jwtTokenConfig)
 
 
     }
+}
+
+fun Application.initDatabase() {
+    var driver = environment.config.property("database.driver").getString()
+    var jdbcUrl = environment.config.property("database.url").getString()
+    Database.connect(hikari(driver, jdbcUrl))
+}
+
+fun Application.initJwtTokenConfig(): JwtTokenConfig {
+    val issuer = environment.config.property("jwt.domain").getString()
+    val audience = environment.config.property("jwt.audience").getString()
+    val realm = environment.config.property("jwt.realm").getString()
+    return JwtTokenConfig(issuer, audience, realm)
 }
 
 class InvalidTokenException(cause: String) : RuntimeException(cause)

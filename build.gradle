@@ -37,5 +37,8 @@ dependencies {
     compile "io.ktor:ktor-auth:$ktor_version"
     compile "io.ktor:ktor-auth-jwt:$ktor_version"
     compile "io.ktor:ktor-jackson:$ktor_version"
+    compile "com.h2database:h2:1.4.196"
+    compile "org.jetbrains.exposed:exposed:0.16.3"
+    compile 'com.zaxxer:HikariCP:3.3.1'
     testCompile "io.ktor:ktor-server-tests:$ktor_version"
 }
