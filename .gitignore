@@ -5,7 +5,3 @@
 *.iml
 *.ipr
 *.iws
-/.blackbox/pubring.gpg~
-/.blackbox/pubring.kbx~
-/.blackbox/secring.gpg
-/src/authentication/AuthenticationKey.kt
