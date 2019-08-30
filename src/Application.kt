@@ -3,6 +3,7 @@ package fr.itlinkshare.server
 import com.fasterxml.jackson.databind.SerializationFeature
 import fr.itlinkshare.server.authentication.JwtTokenConfig
 import fr.itlinkshare.server.authentication.login
+import fr.itlinkshare.server.authentication.model.AccountTable
 import fr.itlinkshare.server.service.hikari
 import io.ktor.application.Application
 import io.ktor.application.call
@@ -20,6 +21,8 @@ import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -53,6 +56,9 @@ fun Application.module(testing: Boolean = false) {
         exception<InvalidTokenException> { cause ->
             call.respond(HttpStatusCode.Unauthorized, cause)
         }
+        exception<InvalidAccountException> { cause ->
+            call.respond(HttpStatusCode.Unauthorized, cause)
+        }
     }
 
     initDatabase();
@@ -72,6 +78,12 @@ fun Application.initDatabase() {
     var driver = environment.config.property("database.driver").getString()
     var jdbcUrl = environment.config.property("database.url").getString()
     Database.connect(hikari(driver, jdbcUrl))
+
+    if (environment.config.property("env").getString() == "dev") {
+        transaction {
+            SchemaUtils.create(AccountTable)
+        }
+    }
 }
 
 fun Application.initJwtTokenConfig(): JwtTokenConfig {
@@ -82,6 +94,7 @@ fun Application.initJwtTokenConfig(): JwtTokenConfig {
 }
 
 class InvalidTokenException(cause: String) : RuntimeException(cause)
+class InvalidAccountException(cause: String) : RuntimeException(cause)
 class AuthenticationException : RuntimeException()
 class AuthorizationException : RuntimeException()
 
