@@ -54,8 +54,6 @@ fun Route.login(jwtTokenConfig: JwtTokenConfig) {
             if (account.login.login != login && account.login.password != digestFunction(password).joinToString("")) throw InvalidAccountException("Invalid credentials")
 
             deleteAccount(login)
-
-            call.respond("Account $login successfully deleted")
         }
     }
 
@@ -80,16 +78,16 @@ fun Route.login(jwtTokenConfig: JwtTokenConfig) {
         if (findAccount(login) != null) throw InvalidAccountException("Login already exists")
         if (password != confirmPassword) throw InvalidAccountException("Password and confirmation are different")
 
-        addAccount(Account(Login(login, digestFunction(password).joinToString(""))))
+        val account = Account(null, Login(login, digestFunction(password).joinToString("")))
+        val id = addAccount(account)
 
         call.response.status(HttpStatusCode.Created)
-        call.respond("Account creation successful for $login")
+        call.respond(Account(id, account.login))
     }
 
 }
 
-
-private fun createTokenResponse(call: ApplicationCall): JwtTokenResponse {
+fun createTokenResponse(call: ApplicationCall): JwtTokenResponse {
     val token = call.request.header(HttpHeaders.Authorization)?.removePrefix("Bearer ") ?: throw InvalidTokenException("Invalid token")
     val principal = call.authentication.principal<JWTPrincipal>()
     val payload = principal?.payload ?: throw InvalidTokenException("Empty token payload")
@@ -97,6 +95,7 @@ private fun createTokenResponse(call: ApplicationCall): JwtTokenResponse {
     val dueDate = payload.expiresAt ?: throw InvalidTokenException("Invalid expires date")
     return JwtTokenResponse(subjectString, token, formatDate(dueDate))
 }
+
 private val digestFunction = getDigestFunction("SHA-256") { SECRET+"${it.length}" }
 private val algorithm = Algorithm.HMAC256(SECRET)
 fun makeJwtVerifier(issuer: String, audience: String): JWTVerifier = JWT

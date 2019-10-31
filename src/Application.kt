@@ -4,6 +4,10 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import fr.itlinkshare.server.authentication.JwtTokenConfig
 import fr.itlinkshare.server.authentication.login
 import fr.itlinkshare.server.authentication.model.AccountTable
+import fr.itlinkshare.server.directory.directoryManagement
+import fr.itlinkshare.server.directory.model.DirectoryTable
+import fr.itlinkshare.server.directory.model.OrganizationTable
+import fr.itlinkshare.server.directory.model.OrganizationUserTable
 import fr.itlinkshare.server.service.hikari
 import io.ktor.application.Application
 import io.ktor.application.call
@@ -62,26 +66,29 @@ fun Application.module(testing: Boolean = false) {
     }
 
     initDatabase();
-    var jwtTokenConfig = initJwtTokenConfig()
+    val jwtTokenConfig = initJwtTokenConfig()
 
     routing {
         get("/status") {
             call.respondText("Server is running : OK", contentType = ContentType.Text.Plain)
         }
         login(jwtTokenConfig)
-
+        directoryManagement()
 
     }
 }
 
 fun Application.initDatabase() {
-    var driver = environment.config.property("database.driver").getString()
-    var jdbcUrl = environment.config.property("database.url").getString()
+    val driver = environment.config.property("database.driver").getString()
+    val jdbcUrl = environment.config.property("database.url").getString()
     Database.connect(hikari(driver, jdbcUrl))
 
     if (environment.config.property("env").getString() == "dev") {
         transaction {
             SchemaUtils.create(AccountTable)
+            SchemaUtils.create(DirectoryTable)
+            SchemaUtils.create(OrganizationTable)
+            SchemaUtils.create(OrganizationUserTable)
         }
     }
 }
