@@ -8,3 +8,5 @@ data class Organization(val id: Int?, var organizationName: String)
 data class Directory(val id: Int?, var folderName: String)
 
 data class UserRole(val login: String, val role: String)
+
+data class OrganizationFull(val organization: Organization, val directories: List<Directory>, val users: List<UserRole>)
